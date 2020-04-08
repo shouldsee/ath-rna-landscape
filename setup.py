@@ -20,7 +20,6 @@ dict(
 	'Programming Language :: Python :: 3.5',
 	'Programming Language :: Python :: 3.7',
 	],
-	install_requires=[
-	],
+	install_requires=open("requirements.txt","r").read().strip().splitlines(),
 )
 setup(**config)
