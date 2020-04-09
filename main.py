@@ -38,6 +38,11 @@ def _read_pandas(input_pk):
 import matplotlib.pyplot as plt
 import base64
 
+
+ref =_read_pandas('root.download_tair10_defline.tsv')
+ref.index=ref.index.str.split('.',1).str.get(0)
+ref = ref.loc[~ref.index.duplicated()]
+_get_ref_df = ref
 def get_ref_df():
 	ref =_read_pandas('root.download_tair10_defline.tsv')
 	# df = _read_pandas(self.subflow['pandas_meannorm-all'].output.pd_pk)
@@ -163,14 +168,11 @@ def show_gene_scatter(gene_ids:str,data_id):
 
 def _show_gene_csv(gene_id, data_id):
 	gene_id = GeneId(gene_id)
-
-	ref = get_ref_df()
-
 	covX = calc_r(gene_id,data_id)
 	idx  =  np.argsort(-abs(covX['r']).values,axis=None)
 	genes=  covX.iloc[idx]
 	df = genes
-	df = df[['r','rmsd','cov']].merge(ref,left_index=True,right_index=True)
+	df = df[['r','rmsd','cov']].merge(_get_ref_df,left_index=True,right_index=True)
 	df.index.name = 'gene_id'
 	return df
 
@@ -261,6 +263,26 @@ from spiper import jinja2_format
 
 def GeneId(s):
 	return s.upper()
+'''
+import main
+from importlib import reload;
+reload(main)
+from main import  show_isomap, project_sample_project,calc_run
+from main import _show_gene_csv
+
+
+%load_ext line_profiler
+%lprun -f calc_r show_isomap(*"filter_leaves/AT2G25930".split("/"))
+
+
+%lprun -f project_sample_project show_isomap(*"filter_leaves/AT2G25930".split("/"))
+
+%lprun -f show_isomap show_isomap(*"filter_leaves/AT2G25930".split("/"))
+%lprun -f project_sample_project show_isomap(*"filter_leaves/AT2G25930".split("/"))
+
+%lprun -f _show_gene_csv show_isomap(*"filter_leaves/AT2G25930".split("/"))
+
+'''
 
 @app.get("/isomap/{data_id}/{gene_id}")
 def show_isomap(data_id,gene_id):
@@ -268,12 +290,20 @@ def show_isomap(data_id,gene_id):
 	t0 = time.time()
 	gene_id = GeneId(gene_id)
 	n_neighbors = 10
-	xml_prefix = File('$PWD/root.xml/root').expand()
+	# xml_prefix = File('$PWD/root.xml/root').expand()
 	prefix  = File('$PWD/root').expand()
 
-	df = _show_gene_csv(gene_id, data_id)
+	# df = _show_gene_csv(gene_id, data_id)
+
+	gene_id = GeneId(gene_id)
+	covX = calc_r(gene_id,data_id)
+	idx  =  np.argsort(-abs(covX['r']).values,axis=None)
+	genes=  covX.iloc[idx]
+	df = genes
+	df = df[['r','rmsd','cov']].merge(_get_ref_df,left_index=True,right_index=True)
+	df.index.name = 'gene_id'
+
 	accs= df.index[:25]
-	# accs= df.index[:5]	
 	n_feats = len(accs)
 	df = get_data_df(data_id)
 	df = df.loc[accs]
@@ -298,39 +328,7 @@ def show_isomap(data_id,gene_id):
 	add_meta  = 1
 	# if add_meta:
 	if 0:
-		input_pk = curr_isomap.output.pd_pk
-		df = _read_pandas(input_pk)
-		# df = pd.read_pickle(input_pk) 
-		accs = df.columns
-		df_proto = []
-		for acc in accs:
-			fn = 'root.xml/root.fetch_sample_xml-{acc}.json'.format(**locals())	
-
-			sample_attrs = json.loads(open( fn,'r').read())
-			sp = ' '.join(json.loads(sample_attrs['SAMPLE_ATTRS_JSON']).values()).lower().split()
-			lst = []
-			for x in sp:
-				x = x.strip(',')
-				if x in ['seedlings','seedling']:
-					x = 'seedling'
-				if x in ['rosettes','rosette']:
-					x = 'rosette'
-				if x in ['leaves', 'leaf', 'leafs']:
-					x = 'leaf'
-				lst.append(x)
-			sample_attrs['WORDS'] = ' '.join(lst)
-			# sample_attrs['WORDS'] = ' '.join([x for x in sample_attrs] )
-			df_proto.append( pd.Series(sample_attrs))		
-			# df_proto.append( pd.Series(json.loads(open(fn,'r').read()) ))
-
-		odf = pd.concat(df_proto,axis=1).T 
-		odf.__setitem__('source_name',odf.get('source_name',['NA']*len(odf)))
-		odf.__setitem__('tissue',odf.get('tissue',['NA']*len(odf)))
-		odf.__setitem__('WORDS',odf.get('WORDS',['']*len(odf)))
-
-
-		fetched_pd_pk = 'fetched.pd_pk'
-		odf.to_pickle(fetched_pd_pk)
+		pass
 	elif add_meta:
 		input_pk = curr_isomap.output.pd_pk
 		fetched_pd_pk = 'root.fetch_sample_attr.pd_pk'
@@ -358,7 +356,8 @@ def show_isomap(data_id,gene_id):
 	fig.suptitle('Isomap for %s points using %s features and %s neighbors'%(len(odf),n_feats,n_neighbors))
 	fig.savefig(pngBuffer,format='png')
 	pngBuffer.seek(0);
-	myTable = odf.to_html(table_id='myTable')
+	myTable = odf.to_csv('myTable')
+	# myTable = odf.to_html(table_id='myTable')
 	f.write('<h2>'+gene_id+'</h2>')
 	f.write('<h2>'+"%.3fs"%(time.time() -t0) +'</h2>')
 	f.write('<img src="data:image/png;base64,%s"></img>'%(base64.b64encode(pngBuffer.read()).decode('utf8')))
@@ -485,7 +484,7 @@ $(document).ready(function () {
 	# .format(**locals()))	
 	# odf.to_csv(self.output.csv)
 	# odf.to_pickle(self.output.pd_pk)		
-	# from pprint import pprint
+	# from pprint importpr pprint
 	# curr_meta = _runner(
 	# 	fetch_sample_attr,       prefix,        xml_prefix,
 	# 	fn_pk,
