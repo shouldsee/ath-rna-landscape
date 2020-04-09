@@ -293,6 +293,7 @@ print("[done]%.3f"%(time.time()-t0))
 
 '''
 
+from fastapi import Depends
 from get_isomap import get_isomap
 @app.get("/isomap/{data_id}/{gene_id}")
 def show_isomap(data_id,gene_id,):

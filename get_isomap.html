@@ -3,35 +3,21 @@
 
 <head>
     <title>{{gene_id}}</title>
-    <!--
-    <script src="https://requirejs.org/docs/release/2.3.5/minified/require.js" type="text/javascript"></script>
-<script type="text/javascript">
-require.config({
-    paths: {
-        DT: '//cdn.datatables.net/1.10.19/js/jquery.dataTables.min',
-    }
-});
-require(["DT"], function(DT) {
-    $(document).ready( () => {
-        // Turn existing table addressed by its id `myTable` into datatable
-        $("#myTable").DataTable();
-    })
-});
-</script>
--->
-    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.1.min.js" type="text/javascript"></script>
-    <script src="http://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js" type="text/javascript"></script>
-    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
 
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+<script src="http://cdn.datatables.net/1.10.19/js/jquery.dataTables.js" type="text/javascript"></script>  
+{# https://cdn.datatables.net/select/1.3.1/js/dataTables.select.js   #}
+<script src="https://cdn.datatables.net/select/1.3.0/js/dataTables.select.js" type="text/javascript"></script>
+<script src="https://cdn.datatables.net/select/1.3.0/js/select.jqueryui.js" type="text/javascript"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
     <!-- The jQuery library is a prerequisite for all jqSuite products -->
     <!-- # <script type="text/ecmascript" src="../../../js/jquery.min.js"></script>  -->
-    <script type="text/ecmascript" src="http://www.guriddo.net/demo/js/trirand/i18n/grid.locale-en.js"></script>
-    <script type="text/ecmascript" src="http://www.guriddo.net/demo/js/trirand/src/jquery.jqGrid.js"></script>
 
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"> 
-    <link rel="stylesheet" type="text/css" media="screen" href="http://www.guriddo.net/demo/css/trirand/ui.jqgrid-bootstrap.css" />
 
 
 
@@ -40,16 +26,122 @@ require(["DT"], function(DT) {
 <body>
 
 
-<div id="myChart-container"  
-style="position: relative; margin:auto;  width:40vw"
->
-    <canvas id="myChart">Chart loading</canvas>
-</div>
+
+{# <script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
+ <script src="https://www.unpkg.com/d3-selection-multi@1.0.1/build/d3-selection-multi.min.js" type="text/javascript"></script>
+ #}
+
+{# <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha256-hYXbQJK4qdJiAeDVjjQ9G0D6A0xLnDQ4eJI9dkm7Fpk=" crossorigin="anonymous"></script> #}
+{# <script src="https://www.unpkg.com/d3-selection-multi@1.0.1/build/d3-selection-multi.min.js" type="text/javascript"></script> #}
+{# <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script> #}
+
+
+{# <script src="/static/div_add_svg.js"></script> #}
+
+{# <div id="chart-container"  style="position: relative; margin:auto;  width:40vw"> #}
+    {# <canvas id="myChart">Chart loading</canvas> #}
+{# </div> #}
+
+
 {# <img src="data:image/png;base64,{{pngString}}"></img> #}
 {# view-source:https://www.chartjs.org/samples/latest/ #}
-<script src="https://www.chartjs.org/dist/2.9.3/Chart.min.js" type="text/javascript"></script>
+<script src="https://www.chartjs.org/dist/2.9.3/Chart.js" type="text/javascript"></script>
 <script src="https://www.chartjs.org/samples/latest/utils.js" type="text/javascript"></script>
-<script type="text/javascript"> 
+
+{# <script src="https://code.createjs.com/1.0.0/easeljs.min.js"></script> #}
+<script>
+// var stage = new createjs.Stage("myChart");
+// createjs.Ticker.on("tick", tick);
+// var selection = new createjs.Shape(),
+//     g = selection.graphics.setStrokeStyle(1).beginStroke("#000").beginFill("rgba(0,0,0,0.05)"),
+//     sd = g.setStrokeDash([10,5], 0).command,
+//     r = g.drawRect(0,0,100,100).command,
+//     moveListener;
+    
+
+// stage.on("stagemousedown", dragStart);
+// stage.on("stagemouseup", dragEnd);
+
+// function dragStart(event) {
+//     stage.addChild(selection).set({x:event.stageX, y:event.stageY});
+//     r.w = 0; r.h = 0;
+//     moveListener = stage.on("stagemousemove", drag);
+// };
+
+// function drag(event) {
+//     r.w = event.stageX - selection.x;
+//     r.h = event.stageY - selection.y; 
+// }
+
+// function dragEnd(event) {
+//     stage.off("stagemousemove", moveListener);
+// }
+
+// function tick(event) {
+//     stage.update(event);
+//     sd.offset--;
+// }
+
+</script>
+
+<style type="text/css">
+    div.inline { float:left; }
+</style>
+    <div id="chart-container" class="inline" style="width:400px; height:400px;">
+        <canvas id="chart-origin"></canvas>
+    </div>
+
+    <div id="chart-container2" class="inline" style="width:400px; height:400px;">
+        <canvas id="myChart"></canvas>
+    </div>
+<div id="info-div"></div>
+
+<script>
+    
+var lastEvent;
+Chart.defaults.scatterWithBox = Chart.defaults.scatter;
+var isDown=0;
+var lastEvent2;
+var e0={},e1={};
+var originalDraw = Chart.controllers.scatter.prototype.draw
+// var custom = Chart.controllers.scatter.extend({
+var custom;
+Chart.helpers.extend(Chart.controllers.scatter.prototype, {
+    draw: function() {
+        // Call super method first
+        // Chart.controllers.scatter.prototype.draw.call(this, ease);
+        // Chart.controllers.scatter.prototype.draw.apply(this,arguments);
+        originalDraw.apply(this,arguments);
+        // Chart.controllers.scatter.prototype.draw.apply(this,arguments);
+        // call(this, ease);
+        // Now we can do some custom drawing for this dataset. Here we'll draw a red box around the first point in each dataset
+        var meta = this.getMeta();
+        var pt0 = meta.data[0];
+        var radius = pt0._view.radius;
+        var ctx = this.chart.chart.ctx;
+
+        ctx.save();
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 1;
+        if (isDown){
+            ctx.beginPath();
+            pts_rect(ctx,e0,e1);
+            // ctx.rect(0,0,100,100);
+            ctx.stroke();            
+        }else{
+            ctx.beginPath();
+        }
+        // console.log(meta);
+        window.pt0 = pt0;
+        window.meta=meta;
+        // window.meta = JSON.parse(JSON.stringify(meta));
+        // console.log("[lastEvent]"+lastEvent);
+    }
+});
+Chart.controllers.scatterWithBox = custom;
+
+
 var dataPoints = [];
 var myjson = {{myjson}};
 // var dataPoints = 
@@ -59,32 +151,39 @@ myjson.map(function(x){
 var color = Chart.helpers.color;
 // var pointBackgroundColors = [];
 var pointBackgroundColors = new Array(dataPoints.length);
-function updateColor(myChart,dataset){
-    const _red=color(window.chartColors.red).alpha(0.8).rgbString();
-    const _green=color(window.chartColors.green).alpha(0.8).rgbString();
 
+const _red=color(window.chartColors.red).alpha(0.8).rgbString();
+const _green=color(window.chartColors.green).alpha(0.8).rgbString();
+function updatePointColor(i, colorIndex){
+    if(colorIndex==1){
+        pointBackgroundColors[i] = _red
+    }else{
+        pointBackgroundColors[i] = _green
+    }
+}
+function updateColor(myChart,dataset){
+    const mySet = new Set(dataset);
     for (i = 0; i < pointBackgroundColors.length; i++) {
-        if (dataset.includes(i)){
-            pointBackgroundColors[i] = _red;
-        } else {
-            pointBackgroundColors[i] = _green;
-        }
-        // if (dataset[i] == true) {
-        //     pointBackgroundColors[i] = _red;
-        // } else {
-        //     pointBackgroundColors[i] = _green;
-        // }
+        updatePointColor(i, mySet.has(i));
     }
     myChart.update();
 
 }
-var myChart = new Chart(
-    document.getElementById("myChart").getContext('2d'), {
 
+canvas = document.getElementById("chart-origin");
+
+var myChart = new Chart(
+    canvas.getContext('2d'), {
+
+    // type: 'scatterWithBox',
     type: 'scatter',
     options:{
-          aspectRatio:1,
-          maintainAspectRatio: true,
+          responsive: true,
+          onComplete: function() {
+            console.log("rendered");
+            window.xx = this;
+              },
+          maintainAspectRatio: false,
     },
     data: {
         datasets: [
@@ -96,15 +195,138 @@ var myChart = new Chart(
         ]
     }
 });
+// d3.select("#myChart").attr("height",400).attr("width",400);
 var dataset = myjson.map(function(e){return(randomScalingFactor()>0.0)});
 updateColor(myChart, myjson.map(function(e){return(randomScalingFactor()>0.0)}))
 
 
+
 document.addEventListener('DOMContentLoaded', function() {
+// div_add_svg("#chart-container");
+});
 // $(document).ready( () => {
     // Turn existing table addressed by its id `myTable` into datatable
-    console.log("table loading;");
-    window.table = table= $("#myTable").DataTable();
+
+
+
+// Now we can create and use our new chart type
+
+
+</script>
+<script type="text/javascript">
+    
+canvas = document.getElementById("chart-origin");
+canvas = canvas2 = document.getElementById("myChart");
+canvas.width= w = 400;
+canvas.height=h = 400;
+canvas2.getContext("2d").drawImage(
+    document.getElementById("chart-origin"),
+    0,0,w,h,
+    0,0,w,h,
+    );
+
+function pts_rect(ctx, e0, e1){
+    // ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // ctx.beginPath();
+
+    // ctx.drawImage(
+    //     document.getElementById("chart-origin"),
+    //     0,0,w,h,
+    //     0,0,w,h,
+    //     );
+
+    ctx.lineWidth = "1";
+    ctx.strokeStyle = "red";
+    x1 = e0.layerX;
+    x2 = e1.layerX;
+    y1 = e0.layerY;
+    y2 = e1.layerY;
+    console.log([Math.min(x1,x2), Math.min(y1,y2), Math.abs(x1-x2), Math.abs(y1-y2) ]);
+    ctx.rect(Math.min(x1,x2), Math.min(y1,y2), Math.abs(x1-x2), Math.abs(y1-y2) );
+    // ctx.rect(162, 320, 45, 48);
+    ctx.stroke();
+
+
+}
+
+['mousedown', 'mousemove' ,'mouseup','mouseleave'].map(function(etype){
+    document.getElementById("chart-origin").addEventListener(etype, function(e) {
+        if (etype=='mousedown'){
+            e0.layerX = e.layerX;
+            e0.layerY = e.layerY;
+            isDown = 1;
+            // myChart.draw();
+        }else if(etype=="mouseup" || etype=="mouseleave"){
+            if (isDown==1){
+                console.log("updateSelection");
+                xmin = Math.min(e0.layerX, e1.layerX);
+                xmax = Math.max(e0.layerX, e1.layerX);
+                ymin = Math.min(e0.layerY, e1.layerY);
+                ymax = Math.max(e0.layerY, e1.layerY);
+
+                console.log([xmin,xmax,ymin,ymax])
+                metaData  = myChart.getDatasetMeta(0).data
+                sel = [];
+                metaData.map(function(x){
+                    var i = x._index;
+                    colorIndex =  x._view.x <= xmax &&  x._view.x >=xmin  && x._view.y<=ymax && x._view.y >= ymin;
+                    updatePointColor(i, colorIndex);
+                    if (colorIndex==true){
+                        sel.push(i);
+                    }
+                    // searched     = 
+                    // intersection = sel.filter(x=> )                    
+                    // let intersection = new Set([...set1].filter(x => set2.has(x)))
+
+                });
+
+                myChart.update();
+
+            }
+            isDown = 0;
+        }
+        myChart.draw();
+        e1.layerX= e.layerX;
+        e1.layerY= e.layerY;
+        lastEvent2 = e.type;
+        console.log("[lastEvent2]" + lastEvent2);
+    });
+
+})
+
+
+
+// var myObj = document.getElementById('chart-origin');
+// for(var key in myObj){
+//     if(key.search('on') === 0) {
+//         myObj.addEventListener(key.slice(2), function(e){
+//             if (['mousedown','mouseup','click','pointermove'].includes(e.type)){
+//             lastEvent = e.type;
+
+//             }
+//         // console.log(e.type);
+//        });
+//         if (key.startsWith('onmouse')==0){
+//             console.log(key);
+//             myObj.addEventListener(key.slice(2), function(e){
+//             console.log(e.type);
+//            });
+
+//         };
+//     }
+// }
+
+</script>
+
+
+<script type="text/javascript">
+</script>
+<hr>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+
+console.log("table loading;");
+    window.myTable = table= $("#myTable").DataTable({select:true});
 
     x = document.getElementById("myTable_filter").getElementsByTagName("input")[0]
     x.addEventListener("keyup",function(event){
@@ -112,10 +334,11 @@ document.addEventListener('DOMContentLoaded', function() {
         updateColor(myChart,
             table.rows({filter: 'applied'})[0]);        
     });
+// document.addEventListener('DOMContentLoaded', function() {
+
 });
-
-
 </script>
+
 
 {{myTable}}
 
