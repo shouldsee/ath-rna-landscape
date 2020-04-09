@@ -1,0 +1,124 @@
+
+<head>
+
+<head>
+    <title>{{gene_id}}</title>
+    <!--
+    <script src="https://requirejs.org/docs/release/2.3.5/minified/require.js" type="text/javascript"></script>
+<script type="text/javascript">
+require.config({
+    paths: {
+        DT: '//cdn.datatables.net/1.10.19/js/jquery.dataTables.min',
+    }
+});
+require(["DT"], function(DT) {
+    $(document).ready( () => {
+        // Turn existing table addressed by its id `myTable` into datatable
+        $("#myTable").DataTable();
+    })
+});
+</script>
+-->
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.1.min.js" type="text/javascript"></script>
+    <script src="http://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js" type="text/javascript"></script>
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+    <!-- The jQuery library is a prerequisite for all jqSuite products -->
+    <!-- # <script type="text/ecmascript" src="../../../js/jquery.min.js"></script>  -->
+    <script type="text/ecmascript" src="http://www.guriddo.net/demo/js/trirand/i18n/grid.locale-en.js"></script>
+    <script type="text/ecmascript" src="http://www.guriddo.net/demo/js/trirand/src/jquery.jqGrid.js"></script>
+
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"> 
+    <link rel="stylesheet" type="text/css" media="screen" href="http://www.guriddo.net/demo/css/trirand/ui.jqgrid-bootstrap.css" />
+
+
+
+
+</head>
+<body>
+
+
+<div id="myChart-container"  
+style="position: relative; margin:auto;  width:40vw"
+>
+    <canvas id="myChart">Chart loading</canvas>
+</div>
+{# <img src="data:image/png;base64,{{pngString}}"></img> #}
+{# view-source:https://www.chartjs.org/samples/latest/ #}
+<script src="https://www.chartjs.org/dist/2.9.3/Chart.min.js" type="text/javascript"></script>
+<script src="https://www.chartjs.org/samples/latest/utils.js" type="text/javascript"></script>
+<script type="text/javascript"> 
+var dataPoints = [];
+var myjson = {{myjson}};
+// var dataPoints = 
+myjson.map(function(x){
+    dataPoints.push({x:x.isomap0, y:x.isomap1});
+})
+var color = Chart.helpers.color;
+// var pointBackgroundColors = [];
+var pointBackgroundColors = new Array(dataPoints.length);
+function updateColor(myChart,dataset){
+    const _red=color(window.chartColors.red).alpha(0.8).rgbString();
+    const _green=color(window.chartColors.green).alpha(0.8).rgbString();
+
+    for (i = 0; i < pointBackgroundColors.length; i++) {
+        if (dataset.includes(i)){
+            pointBackgroundColors[i] = _red;
+        } else {
+            pointBackgroundColors[i] = _green;
+        }
+        // if (dataset[i] == true) {
+        //     pointBackgroundColors[i] = _red;
+        // } else {
+        //     pointBackgroundColors[i] = _green;
+        // }
+    }
+    myChart.update();
+
+}
+var myChart = new Chart(
+    document.getElementById("myChart").getContext('2d'), {
+
+    type: 'scatter',
+    options:{
+          aspectRatio:1,
+          maintainAspectRatio: true,
+    },
+    data: {
+        datasets: [
+            {
+                data: dataPoints,
+                pointBackgroundColor: pointBackgroundColors,
+                pointBorderColor: pointBackgroundColors,
+            }
+        ]
+    }
+});
+var dataset = myjson.map(function(e){return(randomScalingFactor()>0.0)});
+updateColor(myChart, myjson.map(function(e){return(randomScalingFactor()>0.0)}))
+
+
+document.addEventListener('DOMContentLoaded', function() {
+// $(document).ready( () => {
+    // Turn existing table addressed by its id `myTable` into datatable
+    console.log("table loading;");
+    window.table = table= $("#myTable").DataTable();
+
+    x = document.getElementById("myTable_filter").getElementsByTagName("input")[0]
+    x.addEventListener("keyup",function(event){
+        table.search(this.value).draw();
+        updateColor(myChart,
+            table.rows({filter: 'applied'})[0]);        
+    });
+});
+
+
+</script>
+
+{{myTable}}
+
+
+
+</body>		

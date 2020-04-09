@@ -274,11 +274,15 @@ from main import _show_gene_csv
 import time
 t0 = time.time()
 show_isomap(*"filter6/AT2G25930".split("/"))
-print("[done]%.3f"%time.time()-t0)
+print("[done]%.3f"%(time.time()-t0))
 
 %load_ext line_profiler
-%lprun -f calc_r show_isomap(*"filter_leaves/AT2G25930".split("/"))
+%lprun -f show_isomap show_isomap(*"filter_leaves/AT2G25930".split("/"))
+%lprun -f show_isomap show_isomap(*"filter6/AT2G25930".split("/"))
 
+%lprun -f show_isomap show_isomap(*"filter_leaves/AT2G25930".split("/"))
+
+%lprun -f calc_r show_isomap(*"filter_leaves/AT2G25930".split("/"))
 
 %lprun -f project_sample_project show_isomap(*"filter_leaves/AT2G25930".split("/"))
 
@@ -289,70 +293,81 @@ print("[done]%.3f"%time.time()-t0)
 
 '''
 
+from get_isomap import get_isomap
 @app.get("/isomap/{data_id}/{gene_id}")
-def show_isomap(data_id,gene_id):
+def show_isomap(data_id,gene_id,):
+	f = get_isomap(data_id,gene_id,None)
+	return StreamingResponse(f,media_type='text/html')
+
+# 104.238.149.248
+# @app.get("/isomap/{data_id}/{gene_id}")
+def show_isomap(data_id,gene_id,):
 	import time
 	t0 = time.time()
 	gene_id = GeneId(gene_id)
 	n_neighbors = 10
 	# xml_prefix = File('$PWD/root.xml/root').expand()
-	prefix  = File('$PWD/root').expand()
+	root_prefix  = File('$PWD/root').expand()
+	# DIR = 
+	gene_id = GeneId(gene_id)
 
 	# df = _show_gene_csv(gene_id, data_id)
 
-	gene_id = GeneId(gene_id)
-	covX = calc_r(gene_id,data_id)
-	idx  =  np.argsort(-abs(covX['r']).values,axis=None)
-	genes=  covX.iloc[idx]
-	df = genes
-	df = df[['r','rmsd','cov']].merge(_get_ref_df,left_index=True,right_index=True)
-	df.index.name = 'gene_id'
+	ref =_read_pandas('root.download_tair10_defline.tsv')
+	ref.index=ref.index.str.split('.',1).str.get(0)
+	ref = ref.loc[~ref.index.duplicated()]
+	_get_ref_df = ref
 
-	accs= df.index[:25]
-	n_feats = len(accs)
-	df = get_data_df(data_id)
-	df = df.loc[accs]
-	fn_pk = 'temp.pk'
-	df.to_pickle( fn_pk )
-	_runner = cache_run
-	curr_isomap = _runner(project_sample_project, 
-		prefix,         
-		'isomap',
-		fn_pk, 
-		1,
-		3,
-		n_neighbors )
-		# 10)
-	from pprint import pprint
-	from collections import OrderedDict
-	from spiper.types import LoggedShellCommand
-	import xml.etree.ElementTree as ET
-	import requests,io
-	import json
-	# accs = "SRR1046851 SRR1046866".split()
-	add_meta  = 1
-	# if add_meta:
-	if 0:
-		pass
-	elif add_meta:
+	df0 = df = get_data_df(data_id)
+	with Path('tempdir.%s'%str(time.time())).makedirs_p().realpath() as cdir:
+		####### filter by correlation
+		### calculation
+		X = df.values * df.loc[[gene_id]].values
+		covX =  pd.DataFrame({'cov':np.mean(X,axis=1,keepdims=0),'rmsd':np.sqrt(np.mean(np.square(df.values),axis=1))},df.index)
+		covX['r']    =covX['cov'].values /  covX['rmsd'].values /np.sqrt( np.mean(np.square( df.loc[gene_id].values)))
+
+		idx  =  np.argsort(-abs(covX['r']).values,axis=None)
+		genes=  covX.iloc[idx]
+		df = genes
+		df = pd.concat([df[['r','rmsd','cov']], _get_ref_df.reindex(df.index) ],axis=1)
+		df.index.name = 'gene_id'
+
+		### filtering
+		accs= df.index[:25]
+		n_feats = len(accs)
+		df = df0
+		df = df.loc[accs]
+
+		prefix = cdir/'root'
+		fn_pk = Path('temp.pk').realpath()
+		df.to_pickle( fn_pk )
+
+
+		### calculating isomap
+		_runner = cache_run
+		curr_isomap = _runner(project_sample_project, 
+			prefix,         
+			'isomap',
+			fn_pk, 
+			1,
+			3,
+			n_neighbors )
+			# 10)
+		### concatenating csv
 		input_pk = curr_isomap.output.pd_pk
-		fetched_pd_pk = 'root.fetch_sample_attr.pd_pk'
+		fetched_pd_pk = root_prefix+'.fetch_sample_attr.pd_pk'
 		curr   = _runner(prepare_csv,
 		             prefix, 			
 		             fetched_pd_pk,
 		             input_pk,
 			)	   
 		odf = _read_pandas(curr.output.csv).reindex(_read_pandas(input_pk).columns)
-	else:
-		input_pk = curr_isomap.output.pd_pk
-		odf = _read_pandas(input_pk).T
-
-	print(odf.head())
-	myjson = odf.reset_index().to_json(orient='records')
+		myjson = odf.reset_index().to_json(orient='records')
+		myTable = odf.to_html(table_id='myTable')
+	cdir.rmtree();
+		
 	f = io.StringIO()
-	# pngBuffer = open(curr_isomap.output.png,'rb')
 	pngBuffer = io.BytesIO()
-
 	import matplotlib.pyplot as plt
 	fig,axs = plt.subplots(1,2,figsize=[12,6])
 	axs = axs.ravel()
@@ -361,8 +376,6 @@ def show_isomap(data_id,gene_id):
 	fig.suptitle('Isomap for %s points using %s features and %s neighbors'%(len(odf),n_feats,n_neighbors))
 	fig.savefig(pngBuffer,format='png')
 	pngBuffer.seek(0);
-	myTable = odf.to_csv('myTable')
-	# myTable = odf.to_html(table_id='myTable')
 	f.write('<h2>'+gene_id+'</h2>')
 	f.write('<h2>'+"%.3fs"%(time.time() -t0) +'</h2>')
 	f.write('<img src="data:image/png;base64,%s"></img>'%(base64.b64encode(pngBuffer.read()).decode('utf8')))
@@ -482,24 +495,9 @@ $(document).ready(function () {
 -->
 
 
-
-    
 </body>		
 		''',**locals()))
-	# .format(**locals()))	
-	# odf.to_csv(self.output.csv)
-	# odf.to_pickle(self.output.pd_pk)		
-	# from pprint importpr pprint
-	# curr_meta = _runner(
-	# 	fetch_sample_attr,       prefix,        xml_prefix,
-	# 	fn_pk,
-	# 	)
-
-	# 	# self.subflow['project_sample_isomap'].output.pd_pk)
-
-	# odf.to_html(f)
 	f.seek(0);
-
 	return StreamingResponse(f,media_type='text/html')           
 
 
