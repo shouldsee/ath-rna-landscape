@@ -1,6 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
+from pydantic import BaseModel
+from path import Path
+
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="."), name="static")
@@ -22,16 +25,17 @@ import io
 import numpy as np
 # from ath_network import _read_pandas
 import pandas as pd
-def _read_pandas(input_pk):
-	if input_pk.endswith('pk'):
-		df = pd.read_pickle(input_pk)
-	elif input_pk.endswith('csv'):
-		df = pd.read_csv(input_pk,index_col=[0])
-	elif input_pk.endswith('tsv'):
-		df = pd.read_csv(input_pk,index_col=[0],sep='\t')
-	else:
-		assert 0, (input_pk,)
-	return df
+# def _read_pandas(input_pk):
+# 	if input_pk.endswith('pk'):
+# 		df = pd.read_pickle(input_pk)
+# 	elif input_pk.endswith('csv'):
+# 		df = pd.read_csv(input_pk,index_col=[0])
+# 	elif input_pk.endswith('tsv'):
+# 		df = pd.read_csv(input_pk,index_col=[0],sep='\t')
+# 	else:
+# 		assert 0, (input_pk,)
+# 	return df
+from get_isomap import _read_pandas
 
 # 	AT3G49530
 
@@ -52,8 +56,19 @@ def get_ref_df():
 	return ref
 
 # AT5G61270
-from path import Path
+# from get_isomap import get_data_df
+
 def get_data_df(data_id):
+	data_id = data_id.replace('-','_')
+	if data_id.startswith('h'):
+		df0 = _read_pandas("root.logtpm-normalised-all-float16.pd_pk")
+		resp = get_python_pk(data_id)
+		x = pickle.loads(resp.body)
+		x = df0.reindex(columns=list(x)).astype("float32")
+		del resp
+		return x
+		# return pickle.loads(resp.body)
+
 	fn = 'root.{data_id}.pd_pk'.format(**locals())
 	if Path(fn).isfile():
 		df = _read_pandas(fn)
@@ -65,17 +80,18 @@ def get_data_df(data_id):
 	else:
 		assert 0,(fn,	)
 
-
 def calc_r(gene_id, data_id):
 	df = get_data_df(data_id)
-
+	df.loc[:] = df.values-df.values.mean(axis=1,keepdims=1)
 	X = df.values * df.loc[[gene_id]].values
 	covX =  pd.DataFrame({'cov':np.mean(X,axis=1,keepdims=0),'rmsd':np.sqrt(np.mean(np.square(df.values),axis=1))},df.index)
 	covX['covsq']=covX['cov']**2
 	covX['r']    =covX['cov'] /  covX['rmsd'] /np.sqrt( np.mean(np.square( df.loc[gene_id].values)))
 	covX['rsq']  =covX['r'] ** 2
 	return covX
-
+'''
+AT5G52310
+'''
 # '/home/user/.local/bin/uvicorn --port 8080 main:app'
 import numpy as np
 @app.get("/data_scatter/{data_ids}/{gene_id}")
@@ -119,12 +135,37 @@ def show_data_scatter(gene_id:str,data_ids:str):
 	f.seek(0);
 	return HTMLResponse(f.read())
 
+@app.get("/gene_inter/{data_id:str}/{gene_ids:str}")
+def inter(data_id,gene_ids):
+	df = get_data_df(data_id)
+	gene_ids = gene_ids.upper().split('+')
+	gene_id1,gene_id2 = gene_ids
+	covX1 = calc_r(gene_id1,data_id)
+	covX2 = calc_r(gene_id2,data_id)
+	dfc = pd.DataFrame({'r1':covX1['r'], 'r2':covX2['r'],'rmsd':covX1['rmsd']}, covX1.index)
+	dfc['r_prod'] = np.sqrt(abs(covX1['r'] * covX2['r']))
+	# od = abs(dfc['r_prod']).sort_values(ascending=False).index
+	dfc['_sort'] = -abs(dfc['r_prod'])
+	pd.set_option("display.float_format", lambda x:"%.3f"%x)
+	# pd.options.display.float_format(lambda x:'%.3f'%x)
+	dfc = dfc.sort_values('_sort').drop(columns=['_sort']).head(30)
+	with io.StringIO() as f:
+		f.write(jinja2_format('''
+			{{dfc.to_html()}}
+			''',**locals())
+			)
+		f.seek(0)
+		return HTMLResponse(f.read())
+
+
+
+
+
 @app.get("/gene_scatter/{data_id}/{gene_ids:str}")
 def show_gene_scatter(gene_ids:str,data_id):	
-	gene_ids = gene_ids.split('+')
-
-	# print((gene_ids,))
+	gene_ids = gene_ids.upper().split('+')
 	gene_id1, gene_id2 = gene_ids
+	# gene_id1, gene_id2 = GeneId(gene_id1),GeneId(gene_id2)
 	df = get_data_df(data_id)
 	ref= get_ref_df()
 	# df = _read_pandas('root.{data_id}.pd_pk'.format(**locals()))
@@ -143,6 +184,8 @@ def show_gene_scatter(gene_ids:str,data_id):
 
 	fig = plt.figure(figsize=[8,8])
 	plt.scatter(xs,ys,s=4.,alpha=0.5)
+	plt.xlabel(gene_id1)
+	plt.ylabel(gene_id2)
 	# plt.scatter(covX['rmsd'],covX['cov'],s=2.,alpha=0.5)
 	plt.plot(plt.gca().get_xlim(), plt.gca().get_ylim(),'b--')
 	# plt.title('N=%s'%len(df.values.T))
@@ -153,6 +196,7 @@ def show_gene_scatter(gene_ids:str,data_id):
 	# 'data:image/png;base64,'pngBuffer.read()
 
 	f = io.StringIO()
+	f.write('<h3>{gene_ids!r}</h3>'.format(**locals()))
 	# with open('temp.html','w') as f:
 	f.write('<img src="data:image/png;base64,%s"></img>'%(base64.b64encode(pngBuffer.read()).decode('utf8')))
 	# %'temp2.png')
@@ -227,7 +271,7 @@ def show_gene(gene_id,data_id):
 
 	fig = plt.figure(figsize=[8,8])
 	# plt.scatter(covX['rmsd'],covX['cov'],s=2.,alpha=0.5)
-	plt.scatter(covX['rmsd'],covX['rmsd'] * covX['r'],s=2.,alpha=0.5)
+	plt.scatter( covX['rmsd'], covX['rmsd'] * covX['r'], s=2.,alpha=0.5)
 	plt.plot([0,2],[0,2],'b--')
 	plt.plot([0,2],[0,-2],'b--')
 	plt.title('N=%s'%len(covX))
@@ -237,15 +281,23 @@ def show_gene(gene_id,data_id):
 	# 'data:image/png;base64,'pngBuffer.read()
 
 	f = io.StringIO()
+	f.write(jinja2_format('''
+<h3>Query AGI: {{gene_id}}</h3>		
+		''',**locals()))
 	# with open('temp.html','w') as f:
 	f.write('<img src="data:image/png;base64,%s"></img>'%(base64.b64encode(pngBuffer.read()).decode('utf8')))
 	# %'temp2.png')
 	df = covX
+	# df.insert(1,'links', [jinja2_format('<a href="/gene_scatter/{data_id}/{gene_id}+{x}">scatter</a>',**locals()) for x in df.index])
+	df.insert(0,'links', [f'''
+<a href="/gene_scatter/{data_id}/{gene_id}+{gene_id2}">scatter</a>
+<a href="/gene/{data_id}/{gene_id2}">correlators</a>
+		'''.strip().replace('\n','<br>') for gene_id2 in df.index])
 	pd.set_option("max_colwidth", -1)
 	f.write('<h2>Positive correlation</h2><br>')
-	df.head(30).to_html(f)
+	df.head(30).to_html(f,escape=False)
 	f.write('<h2>negative correlation</h2><br>')
-	df.sort_values('r').head(30).to_html(f)
+	df.sort_values('r').head(30).to_html(f,escape=False)
 	# df.tail(30).to_html(f)
 
 	f.seek(0);
@@ -292,17 +344,155 @@ print("[done]%.3f"%(time.time()-t0))
 %lprun -f _show_gene_csv show_isomap(*"filter_leaves/AT2G25930".split("/"))
 
 '''
+from operator import itemgetter
+from pympler import tracker
+
 
 from fastapi import Depends
 from get_isomap import get_isomap
 @app.get("/isomap/{data_id}/{gene_id}")
 def show_isomap(data_id,gene_id,):
-	f = get_isomap(data_id,gene_id,None)
+	data_df = get_data_df(data_id)
+	f = get_isomap(data_df,gene_id,None)
+	# return StreamingResponse(f,media_type='text/html')
+	# s = f.read()
+	# f.close();
+
+	# mem = tracker.SummaryTracker()
+	# from pprint import pprint
+	# pprint(sorted(mem.create_summary(), reverse=True, key=itemgetter(2))[:10])			
+	# return Response(s,media_type='text/html')
 	return StreamingResponse(f,media_type='text/html')
 
-# 104.238.149.248
-# @app.get("/isomap/{data_id}/{gene_id}")
-def show_isomap(data_id,gene_id,):
+
+from _hash import hash_str
+class python_code(BaseModel):
+	code:str
+	hash_val:str =''
+	pass
+
+# @app.post("/python")
+@app.get("/python")
+def python(PREFIX = ''):
+	s =jinja2_format('''	
+<textarea id="code" for="code" style="width:50vw; height:50vh;"></textarea>
+<hr>
+<button id="submit">submit</button>
+<div id="stderr">
+<script>
+_stderr = function(str){
+    console.log(str);
+    document.getElementById('stderr').insertAdjacentHTML( 'beforeend', "<br>"+str);
+}
+
+document.getElementById("submit").onclick= function(event){
+    var xhr = new XMLHttpRequest();
+    var url ="{{PREFIX}}/python/post";
+    xhr.open("POST", url, false);
+    xhr.onload = function(){
+    	_stderr(this.responseText);
+    }
+    xhr.onerror = function(){
+        _stderr("Unable to fetch github_sha for branch:"+branch);
+        _stderr("[exited]");
+    }
+    xhr.send(JSON.stringify(
+    {
+    	code:document.getElementById("code").value,
+    }));
+}
+</script>
+''',**locals())
+	return HTMLResponse(s)
+DIR = Path("$PWD").expand()
+(DIR / "codes" ).makedirs_p()
+import pickle
+from attrdict import AttrDict
+class AttrDict(AttrDict):
+	def set(self,k,v):
+		return self.__setitem__(k,v)
+
+@app.post("/python/post")
+def inject_python(dat:python_code):
+	lc=AttrDict()
+	# {}
+	print('[PWD]%s'%Path('$PWD').expand())
+	dat.code= dat.code.strip()
+	result = eval(dat.code)
+	dat.hash_val = 'h%d'%hash_str(dat.code)
+	with open( DIR / "codes" / str(dat.hash_val)+'.json', 'w') as f:
+		f.write(dat.json())
+	with open( DIR / "codes" / str(dat.hash_val)+'.pk', 'wb') as f:
+		pickle.dump(result,f)
+	return dat
+	# {'hash_val':hash_val}
+
+import numpy as np
+
+@app.get('/gene/histogram/{data_id}/{gene_id}')
+def gene_histogram(data_id, gene_id):
+	import base64
+	df = get_data_df(data_id)
+	pngBuffer = io.BytesIO()
+	fig = plt.figure(figsize=[8,8])
+	# plt.hist(df.loc[gene_id]+np.log2(1E6), np.linspace(0, 10, 150))
+	plt.hist(df.loc[gene_id], np.linspace(-20, -6, 100))
+	# plt.hist(df.loc[gene_id]+np.log2(1E6), np.linspace(-2, 12, 100))
+	# plt.hist(df.loc[gene_id]+np.log2(1E6), np.linspace(-20, 10, 50))
+	# plt.hist(df.loc[gene_id]*1E6,np.linspace(-20, 0, 50))
+	fig.savefig(pngBuffer,format='png')
+	pngBuffer.seek(0);
+	with io.StringIO() as f:
+		f.write('<img src="data:image/png;base64,%s"></img>'%(base64.b64encode(pngBuffer.read()).decode('utf8')))
+		f.seek(0);
+		return HTMLResponse(f.read(),)
+		# buf.seek(0);
+
+
+
+import json
+@app.get("/python/get/json/{hash_val:str}")
+def get_python(hash_val):
+	with open(DIR/"codes"/str(hash_val)+'.json','r') as f:
+		resp = python_code(**json.load(f))
+	return resp
+
+import json
+@app.get("/python/get/code/{hash_val:str}")
+def get_python(hash_val):
+	with open(DIR/"codes"/str(hash_val)+'.json','r') as f:
+		resp = python_code(**json.load(f)).code
+	return Response(resp,media_type='text/plain')
+
+
+
+import json
+@app.get("/python/get/pk/{hash_val:str}")
+def get_python_pk(hash_val):
+	with open(DIR/"codes"/str(hash_val)+'.pk','rb') as f:
+		return Response(f.read(),media_type='text/plain')
+
+from pprint import pprint
+@app.get("/python/get/pprint/{hash_val:str}")
+def get_python_pprint(hash_val):
+	with open(DIR/"codes"/str(hash_val)+'.pk','rb') as f:
+		buf = io.StringIO()
+		pprint(pickle.load(f),buf)
+		buf.seek(0);
+		return Response(buf.read());
+		# return Response(f.read(),media_type='text/plain')
+
+import json
+import collections
+@app.get("/python/list")
+def get_python():
+	dat = collections.OrderedDict()
+	for fn in (DIR/"codes").glob("*.json"):
+		with open(fn,'r') as f:
+			dat[fn] = python_code(**json.load(f))
+	return dat
+
+def __show_isomap(data_id,gene_id,):
 	import time
 	t0 = time.time()
 	gene_id = GeneId(gene_id)

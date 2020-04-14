@@ -40,14 +40,19 @@ myjson.map(function(x){
 var color = Chart.helpers.color;
 // var pointBackgroundColors = [];
 var pointBackgroundColors = new Array(dataPoints.length);
+var overlayColors = new Array(dataPoints.length);
+var overlayDataPoints = dataPoints;
 
 const _red=color(window.chartColors.red).alpha(0.6).rgbString();
 const _green=color(window.chartColors.green).alpha(0.6).rgbString();
+const _trans=color(window.chartColors.green).alpha(0.0).rgbString();
 function updatePointColor(i, colorIndex){
     if(colorIndex==1){
         pointBackgroundColors[i] = _red
+        overlayColors[i] = _red
     }else{
         pointBackgroundColors[i] = _green
+        overlayColors[i] = _trans
     }
 }
 function updateColor(myChart,dataset){
@@ -60,10 +65,32 @@ function updateColor(myChart,dataset){
 }
 
 canvas = document.getElementById("chart-origin");
+var radius=30;
+var plotRadius ={{plotRadius}};
 var myChart = new Chart(
     canvas.getContext('2d'), {
     type: 'scatter',
     options:{
+            scales: {
+               yAxes: [{
+                        display: true,
+                        stacked: true,
+                        ticks: {
+                            min: -plotRadius,
+                            max: +plotRadius,
+                            // min: -100, // minimum value
+                            // max: +100 // maximum value
+                        }}],
+               xAxes: [{
+                        display: true,
+                        stacked: true,
+                        ticks: {
+                            min: -plotRadius,
+                            max: +plotRadius,
+                            // min: -100, // minimum value
+                            // max: +100 // maximum value
+                        }}],
+                },        
           animation: false,
           responsive: true,
           maintainAspectRatio: false,
@@ -74,7 +101,15 @@ var myChart = new Chart(
                 data: dataPoints,
                 pointBackgroundColor: pointBackgroundColors,
                 pointBorderColor: pointBackgroundColors,
-            }
+                order:1,
+            },
+            {
+                data:overlayDataPoints,
+                pointBorderColor:overlayColors,
+                pointBackgroundColor:overlayColors,
+                order:0,
+            },        
+
         ]
     }
 });
@@ -164,6 +199,7 @@ function _dataset_redraw(arrayIndex){
   updateColor(myChart, arrayIndex)
   var array = arrayIndex.map(function(x){return Object.values(hashDataBuffer)[x];});
   document.hot.loadData(array);
+  document.hot.render();
   document.getElementById("row-count").innerText=`RowCount:${array.length}`;
 };
 
